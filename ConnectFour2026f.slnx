@@ -4,4 +4,6 @@
     <File Path="Directory.Build.props" />
   </Folder>
   <Project Path="ConsoleApp/ConsoleApp.csproj" />
+  <Project Path="Game/Game.csproj" />
+  <Project Path="MenuSystem/MenuSystem.csproj" />
 </Solution>

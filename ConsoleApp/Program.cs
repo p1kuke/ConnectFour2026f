@@ -1,9 +1,22 @@
-﻿Console.WriteLine("Hello, World!");
+﻿using ConsoleApp;
+using Game;
+using MenuSystem;
 
-string x = "foo";
-x = x + "bar";
+Console.WriteLine("Hello, TIC-TAC-TOE!");
 
-for (int i = 0; i < 10; i++)
+var mainMenu = new Menu("Main Menu");
+mainMenu.Items.Add(new MenuItem
 {
-    Console.WriteLine($"Month {i+1}: {DateTime.DaysInMonth(year: 2026, month: i +1)} days");
-}
+    Title = "Start Game", 
+    Shortcut = "S",
+    MethodToRun = () =>
+    {
+        
+        var gameBrain = new GameBrain(5);
+        
+        var gameController = new GameController();
+        return gameController.RunGame(gameBrain);
+    }
+});
+
+mainMenu.Run();

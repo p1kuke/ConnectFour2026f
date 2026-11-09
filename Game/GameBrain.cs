@@ -1,0 +1,83 @@
+namespace Game;
+
+public class GameBrain
+{
+    private readonly int _width;
+    private readonly int _height;
+    private readonly GameState _gameState;
+
+    public GameBrain(int width = 7, int height = 6, int winningLength = 4)
+    {
+        _width = width;
+        _height = height;
+        _gameState = new GameState(width, height, winningLength);
+    }
+
+    public EGameCellState[][] GetBoard() =>
+        _gameState.GetBoard();
+
+    public void MakeMove(int x, int y, EGameCellState player)
+    {
+        // validate move: only the lowest empty cell of a column is allowed
+        if (!GetEmptyCellCoordinates().Contains((x, y)))
+        {
+            throw new InvalidOperationException($"Invalid move: ({x}, {y})");
+        }
+
+        _gameState.MakeMove(x, y, player);
+    }
+
+    public HashSet<(int x, int y)> GetEmptyCellCoordinates() =>
+        _gameState.GetEmptyCellCoordinates();
+
+    public bool IsBoardFull() =>
+        _gameState.IsBoardFull();
+
+    public bool IsWinningMove(int x, int y)
+    {
+        var moveBy = _gameState.GetCellState(x, y);
+        if (moveBy == EGameCellState.Empty) return false;
+
+        var winningLength = _gameState.GetWinningLength();
+
+        // horizontal, vertical, diagonal \, diagonal /
+        var directions = new (int dx, int dy)[] { (1, 0), (0, 1), (1, 1), (1, -1) };
+
+        foreach (var (dx, dy) in directions)
+        {
+            // the placed piece itself
+            var count = 1;
+
+            // forward
+            count += CountInDirection(x, y, dx, dy, moveBy);
+            // backward
+            count += CountInDirection(x, y, -dx, -dy, moveBy);
+
+            if (count >= winningLength)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // counts consecutive cells of the same player starting from the neighbour of (x, y)
+    private int CountInDirection(int x, int y, int dx, int dy, EGameCellState player)
+    {
+        var count = 0;
+        var curX = x + dx;
+        var curY = y + dy;
+
+        while (curX >= 0 && curX < _width &&
+               curY >= 0 && curY < _height &&
+               _gameState.GetCellState(curX, curY) == player)
+        {
+            count++;
+            curX += dx;
+            curY += dy;
+        }
+
+        return count;
+    }
+}
