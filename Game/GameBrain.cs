@@ -6,11 +6,40 @@ public class GameBrain
     private readonly int _height;
     private readonly GameState _gameState;
 
+    // Current player property, delegating the request to GameState
+    public EGameCellState CurrentPlayer => _gameState.CurrentPlayer;
+
+
+    // Constructor by default / by dimensions
     public GameBrain(int width = 7, int height = 6, int winningLength = 4)
     {
         _width = width;
         _height = height;
         _gameState = new GameState(width, height, winningLength);
+    }
+
+    // Constructor for loading from a configuration
+    public GameBrain(GameConfiguration config)
+        : this(config.BoardWidth, config.BoardHeight, config.WinCondition) { }
+
+    // Constructor for loading from a saved game state
+    public GameBrain(GameState gameState)
+    {
+        _gameState = gameState;
+        var (width, height) = gameState.GetBoardSize();
+        _width = width;
+        _height = height;
+    }
+
+    // Method for returning the current state for the repository
+    public GameState GetState() => _gameState;
+
+    // Switching the current player
+    public void SwitchPlayer()
+    {
+        _gameState.CurrentPlayer = _gameState.CurrentPlayer == EGameCellState.Player1
+            ? EGameCellState.Player2
+            : EGameCellState.Player1;
     }
 
     public EGameCellState[][] GetBoard() =>

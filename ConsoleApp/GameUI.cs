@@ -14,8 +14,8 @@ public static class GameUi
                 char displayChar = cellState switch
                 {
                     EGameCellState.Empty => '.',
-                    EGameCellState.X => 'X',
-                    EGameCellState.O => 'O',
+                    EGameCellState.Player1 => 'X',
+                    EGameCellState.Player2 => 'O',
                     _ => throw new ArgumentOutOfRangeException()
                 };
                 Console.Write(displayChar + " ");

@@ -18,18 +18,23 @@ public class HumanPlayer : IPlayer
     {
         while (true)
         {
-            Console.Write($"{Name}, enter column number (1-based): ");
-            var input = Console.ReadLine();
+            Console.Write($"{Name}, enter column number (1-based) or 'S' to save: ");
+            var input = Console.ReadLine()?.Trim();
+
+            // Catch the save command
+            if (string.Equals(input, "S", StringComparison.OrdinalIgnoreCase))
+            {
+                return (-1, -1); // Signal coordinates for saving the game
+            }
 
             if (!int.TryParse(input, out var column))
             {
-                Console.WriteLine("Please enter a number.");
+                Console.WriteLine("Please enter a valid number or 'S' to save.");
                 continue;
             }
 
-            var x = column - 1; // user enters 1..width, board uses 0..width-1
+            var x = column - 1; // 1-based в 0-based
 
-            // legalMoves contains at most one cell per column: the lowest empty one
             foreach (var move in legalMoves)
             {
                 if (move.x == x)
