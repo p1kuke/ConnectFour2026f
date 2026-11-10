@@ -12,17 +12,12 @@ public class AppDbContext : DbContext
 
     public AppDbContext()
     {
-        var folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), 
-            "ConnectFourData"
-        );
-        Directory.CreateDirectory(folder);
-        _dbPath = Path.Combine(folder, "connectfour.db");
+        _dbPath = GetDatabasePath();
     }
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
-        _dbPath = string.Empty;
+        _dbPath = GetDatabasePath();
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -31,6 +26,15 @@ public class AppDbContext : DbContext
         {
             optionsBuilder.UseSqlite($"Data Source={_dbPath}");
         }
+    }
+
+    private static string GetDatabasePath()
+    {
+        var folder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            "ConnectFourData");
+        Directory.CreateDirectory(folder);
+        return Path.Combine(folder, "connectfour.db");
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,111 +1,137 @@
-﻿using ConsoleApp;
+using ConsoleApp;
+using DAL;
 using DAL.Json;
 using Game;
 using MenuSystem;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
-var basePath = Path.Combine(
-    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), 
-    "ConnectFourData"
-);
-var configFolder = Path.Combine(basePath, "configs");
-var gamesFolder = Path.Combine(basePath, "games");
-IConfigRepository configRepository = new JsonConfigRepository(configFolder);
-IGameRepository gameRepository = new JsonGameRepository(gamesFolder);
+bool useDatabase = true;
+var services = new ServiceCollection();
+
+if (useDatabase)
+{
+    services.AddDbContext<AppDbContext>();
+    services.AddScoped<IConfigRepository, EfConfigRepository>();
+    services.AddScoped<IGameRepository, EfGameRepository>();
+}
+else
+{
+    var basePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        "ConnectFourData");
+
+    services.AddScoped<IConfigRepository>(_ =>
+        new JsonConfigRepository(Path.Combine(basePath, "configs")));
+    services.AddScoped<IGameRepository>(_ =>
+        new JsonGameRepository(Path.Combine(basePath, "games")));
+}
+
+using var serviceProvider = services.BuildServiceProvider();
+
+if (useDatabase)
+{
+    using var migrationScope = serviceProvider.CreateScope();
+    migrationScope.ServiceProvider
+        .GetRequiredService<AppDbContext>()
+        .Database
+        .Migrate();
+}
+
+using var appScope = serviceProvider.CreateScope();
+var configRepository = appScope.ServiceProvider.GetRequiredService<IConfigRepository>();
+var gameRepository = appScope.ServiceProvider.GetRequiredService<IGameRepository>();
 
 EnsureDefaultPresets(configRepository);
-var mainMenu = BuildMainMenu(configRepository, gameRepository);
+BuildMainMenu(configRepository, gameRepository).Run();
 
-mainMenu.Run();
-static void EnsureDefaultPresets(IConfigRepository configRepo)
+static void EnsureDefaultPresets(IConfigRepository configRepository)
 {
-    var existingConfigs = configRepo.List();
-    if (existingConfigs.Count == 0)
+    if (configRepository.List().Count != 0)
     {
-        foreach (var preset in GameConfiguration.Presets)
-        {
-            configRepo.Save(preset.Name, preset);
-        }
+        return;
+    }
+
+    foreach (var preset in GameConfiguration.Presets)
+    {
+        configRepository.Save(preset.Name, preset);
     }
 }
 
-static Menu BuildMainMenu(IConfigRepository configRepo, IGameRepository gameRepo)
+static Menu BuildMainMenu(IConfigRepository configRepository, IGameRepository gameRepository)
 {
     return new Menu("Connect Four - Main Menu", EMenuLevel.MainMenu)
     {
-        Items = new List<MenuItem>
-        {
+        Items =
+        [
             new MenuItem
             {
                 Title = "New Game",
                 Shortcut = "1",
-                MethodToRun = () => 
+                MethodToRun = () =>
                 {
-                    var configNames = configRepo.List();
-                    if (configNames.Count == 0)
+                    var configurationNames = configRepository.List();
+                    if (configurationNames.Count == 0)
                     {
                         Console.WriteLine("No configurations available!");
-                        return "";
+                        return string.Empty;
                     }
 
-                    Console.WriteLine("\nSelect Configuration:");
-                    for (int i = 0; i < configNames.Count; i++)
+                    var configurationName = SelectName(configurationNames, "Select Configuration:");
+                    if (configurationName is null)
                     {
-                        Console.WriteLine($"{i + 1}. {configNames[i]}");
+                        return string.Empty;
                     }
 
-                    Console.Write("Choice: ");
-                    if (int.TryParse(Console.ReadLine(), out var choice) && choice >= 1 && choice <= configNames.Count)
-                    {
-                        var selectedConfigName = configNames[choice - 1];
-                        var config = configRepo.Get(selectedConfigName);
-
-                        var gameBrain = new GameBrain(config);
-                        var controller = new GameController(gameRepo);
-
-                        controller.RunGame(gameBrain, Guid.NewGuid(), $"Game_{DateTime.Now:yyyyMMdd_HHmmss}");
-                    }
-                    return "";
+                    var controller = new GameController(gameRepository);
+                    controller.RunGame(
+                        new GameBrain(configRepository.Get(configurationName)),
+                        Guid.NewGuid(),
+                        $"Game_{DateTime.Now:yyyyMMdd_HHmmss}");
+                    return string.Empty;
                 }
             },
             new MenuItem
             {
                 Title = "Load Saved Game",
                 Shortcut = "2",
-                MethodToRun = () => 
+                MethodToRun = () =>
                 {
-                    var savedGames = gameRepo.List();
+                    var savedGames = gameRepository.List();
                     if (savedGames.Count == 0)
                     {
                         Console.WriteLine("\nNo saved games found.");
-                        return "";
+                        return string.Empty;
                     }
 
                     Console.WriteLine("\nSaved Games:");
-                    for (int i = 0; i < savedGames.Count; i++)
+                    for (var index = 0; index < savedGames.Count; index++)
                     {
-                        var g = savedGames[i];
-                        Console.WriteLine($"{i + 1}. {g.Name} (Saved: {g.SavedAt.ToLocalTime():yyyy-MM-dd HH:mm})");
+                        var game = savedGames[index];
+                        Console.WriteLine(
+                            $"{index + 1}. {game.Name} " +
+                            $"(Saved: {game.SavedAt.ToLocalTime():yyyy-MM-dd HH:mm})");
                     }
 
                     Console.Write("Select game to load: ");
-                    if (int.TryParse(Console.ReadLine(), out var choice) && choice >= 1 && choice <= savedGames.Count)
+                    if (!TrySelectIndex(savedGames.Count, out var selectedIndex))
                     {
-                        var selectedSave = savedGames[choice - 1];
-                        var (state, name, _) = gameRepo.Get(selectedSave.Id);
-
-                        var gameBrain = new GameBrain(state);
-                        var controller = new GameController(gameRepo);
-
-                        controller.RunGame(gameBrain, selectedSave.Id, name);
+                        Console.WriteLine("Invalid choice.");
+                        return string.Empty;
                     }
-                    return "";
+
+                    var selectedGame = savedGames[selectedIndex];
+                    var (state, name, _) = gameRepository.Get(selectedGame.Id);
+                    new GameController(gameRepository)
+                        .RunGame(new GameBrain(state), selectedGame.Id, name);
+                    return string.Empty;
                 }
             },
             new MenuItem
             {
                 Title = "Manage Configurations",
                 Shortcut = "3",
-                MethodToRun = () => BuildConfigurationMenu(configRepo).Run()
+                MethodToRun = () => BuildConfigurationMenu(configRepository).Run()
             },
             new MenuItem
             {
@@ -113,28 +139,28 @@ static Menu BuildMainMenu(IConfigRepository configRepo, IGameRepository gameRepo
                 Shortcut = "4",
                 MethodToRun = () =>
                 {
-                    DeleteSavedGame(gameRepo);
-                    return "";
+                    DeleteSavedGame(gameRepository);
+                    return string.Empty;
                 }
             }
-        }
+        ]
     };
 }
 
-static Menu BuildConfigurationMenu(IConfigRepository configRepo)
+static Menu BuildConfigurationMenu(IConfigRepository configRepository)
 {
     return new Menu("Configuration Management", EMenuLevel.SubMenu)
     {
-        Items = new List<MenuItem>
-        {
+        Items =
+        [
             new MenuItem
             {
                 Title = "List Configurations",
                 Shortcut = "1",
                 MethodToRun = () =>
                 {
-                    ListConfigurations(configRepo);
-                    return "";
+                    ListConfigurations(configRepository);
+                    return string.Empty;
                 }
             },
             new MenuItem
@@ -143,8 +169,8 @@ static Menu BuildConfigurationMenu(IConfigRepository configRepo)
                 Shortcut = "2",
                 MethodToRun = () =>
                 {
-                    CreateConfiguration(configRepo);
-                    return "";
+                    CreateConfiguration(configRepository);
+                    return string.Empty;
                 }
             },
             new MenuItem
@@ -153,31 +179,31 @@ static Menu BuildConfigurationMenu(IConfigRepository configRepo)
                 Shortcut = "3",
                 MethodToRun = () =>
                 {
-                    DeleteConfiguration(configRepo);
-                    return "";
+                    DeleteConfiguration(configRepository);
+                    return string.Empty;
                 }
             }
-        }
+        ]
     };
 }
 
-static void ListConfigurations(IConfigRepository configRepo)
+static void ListConfigurations(IConfigRepository configRepository)
 {
-    var configs = configRepo.List();
+    var configurations = configRepository.List();
     Console.WriteLine("\nConfigurations:");
-    if (configs.Count == 0)
+    if (configurations.Count == 0)
     {
         Console.WriteLine("No configurations found.");
         return;
     }
 
-    foreach (var config in configs)
+    foreach (var configuration in configurations)
     {
-        Console.WriteLine($"- {config}");
+        Console.WriteLine($"- {configuration}");
     }
 }
 
-static void CreateConfiguration(IConfigRepository configRepo)
+static void CreateConfiguration(IConfigRepository configRepository)
 {
     Console.Write("\nConfiguration name: ");
     var name = Console.ReadLine()?.Trim();
@@ -202,45 +228,38 @@ static void CreateConfiguration(IConfigRepository configRepo)
     }
 
     Console.Write("Cylinder board? (Y/N): ");
-    var isCylinder = Console.ReadLine()?.Trim().Equals("Y", StringComparison.OrdinalIgnoreCase) == true;
-    configRepo.Save(name, new GameConfiguration(name, width, height, winCondition, isCylinder));
+    var isCylinder = Console.ReadLine()?.Trim()
+        .Equals("Y", StringComparison.OrdinalIgnoreCase) == true;
+    configRepository.Save(name, new GameConfiguration(name, width, height, winCondition, isCylinder));
     Console.WriteLine($"Configuration '{name}' created.");
 }
 
-static void DeleteConfiguration(IConfigRepository configRepo)
+static void DeleteConfiguration(IConfigRepository configRepository)
 {
-    var configs = configRepo.List();
-    if (configs.Count == 0)
+    var configurations = configRepository.List();
+    if (configurations.Count == 0)
     {
         Console.WriteLine("\nNo configurations found.");
         return;
     }
 
-    Console.WriteLine("\nSelect configuration to delete:");
-    for (var i = 0; i < configs.Count; i++)
+    var name = SelectName(configurations, "Select configuration to delete:");
+    if (name is null)
     {
-        Console.WriteLine($"{i + 1}. {configs[i]}");
-    }
-
-    Console.Write("Choice: ");
-    if (!int.TryParse(Console.ReadLine(), out var choice) || choice < 1 || choice > configs.Count)
-    {
-        Console.WriteLine("Invalid choice.");
         return;
     }
 
-    var name = configs[choice - 1];
     Console.Write($"Delete '{name}'? (Y/N): ");
     if (Console.ReadLine()?.Trim().Equals("Y", StringComparison.OrdinalIgnoreCase) == true)
     {
-        configRepo.Delete(name);
+        configRepository.Delete(name);
         Console.WriteLine($"Configuration '{name}' deleted.");
     }
 }
 
-static void DeleteSavedGame(IGameRepository gameRepo)
+static void DeleteSavedGame(IGameRepository gameRepository)
 {
-    var savedGames = gameRepo.List();
+    var savedGames = gameRepository.List();
     if (savedGames.Count == 0)
     {
         Console.WriteLine("\nNo saved games found.");
@@ -248,26 +267,56 @@ static void DeleteSavedGame(IGameRepository gameRepo)
     }
 
     Console.WriteLine("\nSelect saved game to delete:");
-    for (var i = 0; i < savedGames.Count; i++)
+    for (var index = 0; index < savedGames.Count; index++)
     {
-        var game = savedGames[i];
-        Console.WriteLine($"{i + 1}. {game.Name} (Saved: {game.SavedAt.ToLocalTime():yyyy-MM-dd HH:mm})");
+        var game = savedGames[index];
+        Console.WriteLine(
+            $"{index + 1}. {game.Name} " +
+            $"(Saved: {game.SavedAt.ToLocalTime():yyyy-MM-dd HH:mm})");
     }
 
     Console.Write("Choice: ");
-    if (!int.TryParse(Console.ReadLine(), out var choice) || choice < 1 || choice > savedGames.Count)
+    if (!TrySelectIndex(savedGames.Count, out var selectedIndex))
     {
         Console.WriteLine("Invalid choice.");
         return;
     }
 
-    var selectedGame = savedGames[choice - 1];
+    var selectedGame = savedGames[selectedIndex];
     Console.Write($"Delete '{selectedGame.Name}'? (Y/N): ");
     if (Console.ReadLine()?.Trim().Equals("Y", StringComparison.OrdinalIgnoreCase) == true)
     {
-        gameRepo.Delete(selectedGame.Id);
+        gameRepository.Delete(selectedGame.Id);
         Console.WriteLine($"Saved game '{selectedGame.Name}' deleted.");
     }
+}
+
+static string? SelectName(IReadOnlyList<string> names, string title)
+{
+    Console.WriteLine($"\n{title}");
+    for (var index = 0; index < names.Count; index++)
+    {
+        Console.WriteLine($"{index + 1}. {names[index]}");
+    }
+
+    Console.Write("Choice: ");
+    return TrySelectIndex(names.Count, out var selectedIndex)
+        ? names[selectedIndex]
+        : null;
+}
+
+static bool TrySelectIndex(int itemCount, out int index)
+{
+    if (int.TryParse(Console.ReadLine(), out var choice) &&
+        choice >= 1 &&
+        choice <= itemCount)
+    {
+        index = choice - 1;
+        return true;
+    }
+
+    index = -1;
+    return false;
 }
 
 static bool ReadPositiveInteger(string prompt, out int value)
