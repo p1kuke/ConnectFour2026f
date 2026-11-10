@@ -5,6 +5,7 @@ public class GameBrain
     private readonly int _width;
     private readonly int _height;
     private readonly GameState _gameState;
+    private readonly bool _isCylinder;
 
     // Current player property, delegating the request to GameState
     public EGameCellState CurrentPlayer => _gameState.CurrentPlayer;
@@ -16,11 +17,17 @@ public class GameBrain
         _width = width;
         _height = height;
         _gameState = new GameState(width, height, winningLength);
+        _isCylinder = false;
     }
 
     // Constructor for loading from a configuration
     public GameBrain(GameConfiguration config)
-        : this(config.BoardWidth, config.BoardHeight, config.WinCondition) { }
+        : this(config.BoardWidth, config.BoardHeight, config.WinCondition)
+    {
+        config.Validate();
+        _gameState.Configuration = config;
+        _isCylinder = config.IsCylinder;
+    }
 
     // Constructor for loading from a saved game state
     public GameBrain(GameState gameState)
@@ -29,6 +36,7 @@ public class GameBrain
         var (width, height) = gameState.GetBoardSize();
         _width = width;
         _height = height;
+        _isCylinder = gameState.Configuration?.IsCylinder == true;
     }
 
     // Method for returning the current state for the repository
@@ -54,6 +62,7 @@ public class GameBrain
         }
 
         _gameState.MakeMove(x, y, player);
+        _gameState.MoveHistory.Add(new GameMove(x, y, player));
     }
 
     public HashSet<(int x, int y)> GetEmptyCellCoordinates() =>
@@ -98,13 +107,21 @@ public class GameBrain
         var curX = x + dx;
         var curY = y + dy;
 
-        while (curX >= 0 && curX < _width &&
-               curY >= 0 && curY < _height &&
+        var steps = 0;
+        while (curY >= 0 && curY < _height &&
+               (_isCylinder || (curX >= 0 && curX < _width)) &&
                _gameState.GetCellState(curX, curY) == player)
         {
             count++;
-            curX += dx;
+            curX = _isCylinder && dx != 0
+                ? (curX + dx + _width) % _width
+                : curX + dx;
             curY += dy;
+            steps++;
+            if (_isCylinder && dx != 0 && steps >= _width)
+            {
+                break;
+            }
         }
 
         return count;

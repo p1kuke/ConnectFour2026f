@@ -52,5 +52,6 @@ public class AppDbContext : DbContext
 
         // Ignore the jagged Board array because EF Core will persist it through BoardJson
         modelBuilder.Entity<GameState>().Ignore(g => g.Board);
+        modelBuilder.Entity<GameState>().Ignore(g => g.MoveHistory);
     }
 }

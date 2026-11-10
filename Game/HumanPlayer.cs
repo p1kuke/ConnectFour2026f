@@ -21,10 +21,9 @@ public class HumanPlayer : IPlayer
             Console.Write($"{Name}, enter column number (1-based) or 'S' to save: ");
             var input = Console.ReadLine()?.Trim();
 
-            // Catch the save command
             if (string.Equals(input, "S", StringComparison.OrdinalIgnoreCase))
             {
-                return (-1, -1); // Signal coordinates for saving the game
+                return (-1, -1);
             }
 
             if (!int.TryParse(input, out var column))
@@ -33,7 +32,7 @@ public class HumanPlayer : IPlayer
                 continue;
             }
 
-            var x = column - 1; // 1-based в 0-based
+            var x = column - 1;
 
             foreach (var move in legalMoves)
             {

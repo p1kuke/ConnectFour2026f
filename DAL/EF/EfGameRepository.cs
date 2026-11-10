@@ -36,7 +36,7 @@ public class EfGameRepository : IGameRepository
     {
         var state = _context.GameStates
                         .AsNoTracking()
-                        .Include(g => g.Configuration) // <--- Обязательное добавление для A4!
+                        .Include(g => g.Configuration)
                         .FirstOrDefault(g => g.Id == id)
                     ?? throw new FileNotFoundException($"Game save '{id}' not found.");
 

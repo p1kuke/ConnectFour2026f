@@ -2,6 +2,13 @@ using Game;
 
 namespace ConsoleApp;
 
+public enum GameMode
+{
+    HumanVsHuman,
+    HumanVsAi,
+    AiVsAi
+}
+
 public class GameController
 {
     private readonly IGameRepository _gameRepository;
@@ -11,12 +18,26 @@ public class GameController
         _gameRepository = gameRepository;
     }
 
-    public string RunGame(GameBrain gameBrain, Guid gameId, string saveName)
+    public string RunGame(GameBrain gameBrain, Guid gameId, string saveName,
+        GameMode mode = GameMode.HumanVsHuman)
     {
-        var players = new IPlayer[]
+        var players = mode switch
         {
-            new HumanPlayer("Player 1", EGameCellState.Player1),
-            new AIPlayer(EGameCellState.Player2),
+            GameMode.HumanVsHuman => new IPlayer[]
+            {
+                new HumanPlayer("Player 1", EGameCellState.Player1),
+                new HumanPlayer("Player 2", EGameCellState.Player2)
+            },
+            GameMode.AiVsAi => new IPlayer[]
+            {
+                new AIPlayer(EGameCellState.Player1),
+                new AIPlayer(EGameCellState.Player2)
+            },
+            _ => new IPlayer[]
+            {
+                new HumanPlayer("Player 1", EGameCellState.Player1),
+                new AIPlayer(EGameCellState.Player2)
+            }
         };
 
         var playerIndex = Array.FindIndex(players, p => p.PlayerSymbol == gameBrain.CurrentPlayer);
@@ -24,7 +45,7 @@ public class GameController
 
         while (true)
         {
-            GameUi.DrawGameBoard(gameBrain.GetBoard());
+            GameUi.DrawGameBoard(gameBrain.GetBoard(), gameBrain.GetState().MoveHistory.LastOrDefault());
 
             var currentPlayer = players[playerIndex];
             var move = currentPlayer.GetMove(gameBrain.GetEmptyCellCoordinates());
@@ -52,14 +73,14 @@ public class GameController
 
             if (gameBrain.IsWinningMove(move.x, move.y))
             {
-                GameUi.DrawGameBoard(gameBrain.GetBoard());
+                GameUi.DrawGameBoard(gameBrain.GetBoard(), gameBrain.GetState().MoveHistory.LastOrDefault());
                 Console.WriteLine($"{currentPlayer.Name} won!");
                 break;
             }
 
             if (gameBrain.IsBoardFull())
             {
-                GameUi.DrawGameBoard(gameBrain.GetBoard());
+                GameUi.DrawGameBoard(gameBrain.GetBoard(), gameBrain.GetState().MoveHistory.LastOrDefault());
                 Console.WriteLine("Draw!");
                 break;
             }

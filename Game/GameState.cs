@@ -10,15 +10,25 @@ public class GameState : BaseEntity
     public EGameCellState CurrentPlayer { get; set; } = EGameCellState.Player1;
     public GameConfiguration Configuration { get; set; } = default!;
     public DateTime SavedAt { get; set; } = DateTime.UtcNow;
+    public List<GameMove> MoveHistory { get; set; } = [];
 
-    // Вспомогательное свойство для EF Core: сериализует Board в JSON-строку при записи в БД
+    // EF Core persists the board through this serialized backing property.
     [JsonIgnore]
     public string BoardJson
     {
-        get => JsonSerializer.Serialize(Board);
-        set => Board = string.IsNullOrEmpty(value) 
-            ? Array.Empty<EGameCellState[]>() 
-            : JsonSerializer.Deserialize<EGameCellState[][]>(value) ?? Array.Empty<EGameCellState[]>();
+        get => JsonSerializer.Serialize(Board, GameJson.Options);
+        set => Board = string.IsNullOrEmpty(value)
+            ? Array.Empty<EGameCellState[]>()
+            : JsonSerializer.Deserialize<EGameCellState[][]>(value, GameJson.Options) ?? Array.Empty<EGameCellState[]>();
+    }
+
+    [JsonIgnore]
+    public string MoveHistoryJson
+    {
+        get => JsonSerializer.Serialize(MoveHistory, GameJson.Options);
+        set => MoveHistory = string.IsNullOrEmpty(value)
+            ? []
+            : JsonSerializer.Deserialize<List<GameMove>>(value, GameJson.Options) ?? [];
     }
 
     public GameState() : this(7, 6, 4) { }

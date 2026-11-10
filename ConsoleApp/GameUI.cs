@@ -4,7 +4,7 @@ namespace ConsoleApp;
 
 public static class GameUi
 {
-    public static void DrawGameBoard(EGameCellState[][] board)
+    public static void DrawGameBoard(EGameCellState[][] board, GameMove? lastMove = null)
     {
         if (board.Length == 0)
         {
@@ -26,7 +26,10 @@ public static class GameUi
                     EGameCellState.Player2 => 'O',
                     _ => throw new ArgumentOutOfRangeException()
                 };
-                Console.Write(displayChar + " ");
+                var isLastMove = lastMove is not null &&
+                                 lastMove.X == x &&
+                                 lastMove.Y == y;
+                Console.Write(isLastMove ? $"[{displayChar}] " : $"{displayChar}  ");
             }
 
             Console.WriteLine();

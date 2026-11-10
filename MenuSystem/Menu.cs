@@ -5,7 +5,17 @@ public class Menu
     private readonly string _title;
     public Func<string>? TitleProvider { get; set; }
 
-    public List<MenuItem> Items { get; set; } = new List<MenuItem>();
+    private List<MenuItem> _items = new();
+
+    public List<MenuItem> Items
+    {
+        get => _items;
+        set
+        {
+            _items = value ?? throw new ArgumentNullException(nameof(value));
+            ValidateItems();
+        }
+    }
 
     private readonly EMenuLevel _menuLevel;
 
@@ -17,6 +27,8 @@ public class Menu
 
     public string Run()
     {
+        ValidateItems();
+
         var menuDone = false;
         var actionResult = "";
         do
@@ -32,14 +44,10 @@ public class Menu
                 {
                     menuDone = true;
                 }
-                if (_menuLevel != EMenuLevel.MainMenu && actionResult == "M")
+                else if (_menuLevel != EMenuLevel.MainMenu &&
+                         (actionResult == "E" || actionResult == "M" || actionResult == "P"))
                 {
                     menuDone = true;
-                }
-                if (_menuLevel == EMenuLevel.SubSubMenu && actionResult == "P")
-                {
-                    menuDone = true;
-                    actionResult = "Prev";
                 }
                 
             }
@@ -56,14 +64,12 @@ public class Menu
     {
         foreach (var menuItem in Items)
         {
-            if (menuItem.Shortcut == userChoice)
+            if (string.Equals(menuItem.Shortcut, userChoice, StringComparison.OrdinalIgnoreCase))
                 return menuItem.MethodToRun != null ? menuItem.MethodToRun() : "";
         }
 
-        if (userChoice == "E" ||
-            userChoice == "M" ||
-            userChoice == "P")
-            return userChoice;
+        if (IsMandatoryShortcut(userChoice))
+            return userChoice.ToUpperInvariant();
 
         return "";
     }
@@ -77,19 +83,11 @@ public class Menu
 
         foreach (var menuItem in Items)
         {
-            if (menuItem.Shortcut == userChoice) return true;
+            if (string.Equals(menuItem.Shortcut, userChoice, StringComparison.OrdinalIgnoreCase))
+                return true;
         }
 
-        if (_menuLevel == EMenuLevel.MainMenu && userChoice == "E")
-            return true;
-
-        if (_menuLevel == EMenuLevel.SubMenu && userChoice == "M")
-            return true;
-
-        if (_menuLevel == EMenuLevel.SubSubMenu && (userChoice == "M" || userChoice == "P"))
-            return true;
-
-        return false;
+        return IsMandatoryShortcut(userChoice);
     }
 
     private readonly MenuItem _exitMenuItem = new MenuItem()
@@ -125,9 +123,11 @@ public class Menu
                 Console.WriteLine(_exitMenuItem);
                 break;
             case EMenuLevel.SubMenu:
-                Console.WriteLine(_returnToMainMenuItem);
+                Console.WriteLine(_exitMenuItem);
+                Console.WriteLine(_returnToPreviousMenuItem);
                 break;
             case EMenuLevel.SubSubMenu:
+                Console.WriteLine(_exitMenuItem);
                 Console.WriteLine(_returnToPreviousMenuItem);
                 Console.WriteLine(_returnToMainMenuItem);
                 break;
@@ -139,4 +139,38 @@ public class Menu
 
     private string GetTitle() =>
         TitleProvider != null ? TitleProvider() : _title;
+
+    private bool IsMandatoryShortcut(string shortcut) =>
+        shortcut.ToUpperInvariant() switch
+        {
+            "E" when _menuLevel is EMenuLevel.MainMenu or EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
+            "M" when _menuLevel is EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
+            "P" when _menuLevel == EMenuLevel.SubSubMenu => true,
+            _ => false
+        };
+
+    private void ValidateItems()
+    {
+        var shortcuts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var item in Items)
+        {
+            if (item is null)
+                throw new ArgumentException("Menu items cannot be null.", nameof(Items));
+
+            if (string.IsNullOrWhiteSpace(item.Shortcut))
+                throw new ArgumentException("Menu item shortcuts cannot be empty.", nameof(Items));
+
+            if (item.Shortcut.Length == 1 && item.Shortcut.ToUpperInvariant() is "E" or "M" or "P")
+            {
+                throw new ArgumentException(
+                    $"Shortcut '{item.Shortcut}' is reserved for menu navigation.",
+                    nameof(Items));
+            }
+
+            if (!shortcuts.Add(item.Shortcut))
+                throw new ArgumentException(
+                    $"Duplicate menu shortcut '{item.Shortcut}'.",
+                    nameof(Items));
+        }
+    }
 }

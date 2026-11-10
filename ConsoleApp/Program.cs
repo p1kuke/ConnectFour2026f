@@ -84,10 +84,12 @@ static Menu BuildMainMenu(IConfigRepository configRepository, IGameRepository ga
                     }
 
                     var controller = new GameController(gameRepository);
+                    var mode = SelectGameMode();
                     controller.RunGame(
                         new GameBrain(configRepository.Get(configurationName)),
                         Guid.NewGuid(),
-                        $"Game_{DateTime.Now:yyyyMMdd_HHmmss}");
+                        $"Game_{DateTime.Now:yyyyMMdd_HHmmss}",
+                        mode);
                     return string.Empty;
                 }
             },
@@ -303,6 +305,23 @@ static string? SelectName(IReadOnlyList<string> names, string title)
     return TrySelectIndex(names.Count, out var selectedIndex)
         ? names[selectedIndex]
         : null;
+}
+
+static GameMode SelectGameMode()
+{
+    while (true)
+    {
+        Console.WriteLine("Select game mode: 1) Human vs human 2) Human vs AI 3) AI vs AI");
+        switch (Console.ReadLine()?.Trim())
+        {
+            case "1": return GameMode.HumanVsHuman;
+            case "2": return GameMode.HumanVsAi;
+            case "3": return GameMode.AiVsAi;
+            default:
+                Console.WriteLine("Unknown mode.");
+                break;
+        }
+    }
 }
 
 static bool TrySelectIndex(int itemCount, out int index)

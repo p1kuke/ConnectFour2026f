@@ -1,5 +1,15 @@
 bin/
 obj/
+**/bin/
+**/obj/
+.idea/
+*.db
+*.db-shm
+*.db-wal
+*.user
+*.suo
+secrets.json
+.codex/
 /package/
 riderModule.iml
 /_ReSharper.Caches/

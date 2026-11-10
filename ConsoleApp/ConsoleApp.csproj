@@ -6,6 +6,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\DAL\DAL.EF.csproj" />
+      <ProjectReference Include="..\DAL.Json\DAL.Json.csproj" />
       <ProjectReference Include="..\Game\Game.csproj" />
       <ProjectReference Include="..\MenuSystem\MenuSystem.csproj" />
     </ItemGroup>

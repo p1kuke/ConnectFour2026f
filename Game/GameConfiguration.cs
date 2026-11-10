@@ -2,13 +2,13 @@ namespace Game;
 
 public record GameConfiguration
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public string Name { get; set; } = "Classic 7x6";
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public string Name { get; init; } = "Classic 7x6";
     
-    public int BoardWidth { get; set; } = 7;
-    public int BoardHeight { get; set; } = 6;
-    public int WinCondition { get; set; } = 4;
-    public bool IsCylinder { get; set; } = false;
+    public int BoardWidth { get; init; } = 7;
+    public int BoardHeight { get; init; } = 6;
+    public int WinCondition { get; init; } = 4;
+    public bool IsCylinder { get; init; } = false;
 
     // Constructor for deserialization
     public GameConfiguration() { }
@@ -20,6 +20,16 @@ public record GameConfiguration
         BoardHeight = height;
         WinCondition = winCondition;
         IsCylinder = isCylinder;
+    }
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Name))
+            throw new ArgumentException("Configuration name cannot be empty.", nameof(Name));
+        if (BoardWidth <= 0 || BoardHeight <= 0)
+            throw new ArgumentOutOfRangeException(nameof(BoardWidth), "Board dimensions must be positive.");
+        if (WinCondition <= 0 || WinCondition > Math.Max(BoardWidth, BoardHeight))
+            throw new ArgumentOutOfRangeException(nameof(WinCondition), "Win condition is outside the board dimensions.");
     }
     
     // Presets for quick access to common configurations

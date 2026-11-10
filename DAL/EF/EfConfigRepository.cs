@@ -15,15 +15,14 @@ public class EfConfigRepository : IConfigRepository
     public void Save(string name, GameConfiguration config)
     {
         ArgumentNullException.ThrowIfNull(config);
-        config.Name = name;
         var existing = _context.Configurations.FirstOrDefault(c => c.Name == name);
         if (existing != null)
         {
-            existing.Name = config.Name;
-            existing.BoardWidth = config.BoardWidth;
-            existing.BoardHeight = config.BoardHeight;
-            existing.WinCondition = config.WinCondition;
-            existing.IsCylinder = config.IsCylinder;
+            _context.Entry(existing).Property(c => c.Name).CurrentValue = name;
+            _context.Entry(existing).Property(c => c.BoardWidth).CurrentValue = config.BoardWidth;
+            _context.Entry(existing).Property(c => c.BoardHeight).CurrentValue = config.BoardHeight;
+            _context.Entry(existing).Property(c => c.WinCondition).CurrentValue = config.WinCondition;
+            _context.Entry(existing).Property(c => c.IsCylinder).CurrentValue = config.IsCylinder;
         }
         else
         {
