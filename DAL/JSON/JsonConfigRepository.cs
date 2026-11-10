@@ -30,6 +30,17 @@ public class JsonConfigRepository : IConfigRepository
     public void Save(string name, GameConfiguration config)
     {
         var filePath = GetFilePath(name);
+        if (File.Exists(filePath))
+        {
+            var existing = JsonSerializer.Deserialize<GameConfiguration>(
+                File.ReadAllText(filePath), _jsonOptions);
+            if (existing is not null)
+            {
+                config.Id = existing.Id;
+            }
+        }
+
+        config.Name = name;
         var jsonString = JsonSerializer.Serialize(config, _jsonOptions);
         File.WriteAllText(filePath, jsonString);
     }
@@ -54,6 +65,7 @@ public class JsonConfigRepository : IConfigRepository
         return Directory.GetFiles(_folderPath, "*.config.json")
             .Select(Path.GetFileName)
             .Select(fileName => fileName!.Replace(".config.json", ""))
+            .OrderBy(name => name)
             .ToList();
     }
 

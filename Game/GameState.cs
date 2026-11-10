@@ -1,88 +1,77 @@
-namespace Game
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace Game;
+
+public class GameState : BaseEntity
 {
-    public class GameState : BaseEntity
+    public EGameCellState[][] Board { get; set; } = Array.Empty<EGameCellState[]>();
+    public int WinningLength { get; set; } = 4;
+    public EGameCellState CurrentPlayer { get; set; } = EGameCellState.Player1;
+    public GameConfiguration Configuration { get; set; } = default!;
+    public DateTime SavedAt { get; set; } = DateTime.UtcNow;
+
+    // Вспомогательное свойство для EF Core: сериализует Board в JSON-строку при записи в БД
+    [JsonIgnore]
+    public string BoardJson
     {
-        public EGameCellState[][] Board { get; set; }
-        public int WinningLength { get; set; }
-        public EGameCellState CurrentPlayer { get; set; } = EGameCellState.Player1;
-        public DateTime SavedAt { get; set; }
+        get => JsonSerializer.Serialize(Board);
+        set => Board = string.IsNullOrEmpty(value) 
+            ? Array.Empty<EGameCellState[]>() 
+            : JsonSerializer.Deserialize<EGameCellState[][]>(value) ?? Array.Empty<EGameCellState[]>();
+    }
 
-        public GameState()
+    public GameState() : this(7, 6, 4) { }
+
+    public GameState(int width = 7, int height = 6, int winningLength = 4)
+    {
+        Board = new EGameCellState[width][];
+        for (int i = 0; i < width; i++)
         {
-            Board = Array.Empty<EGameCellState[]>();
+            Board[i] = new EGameCellState[height];
         }
+        WinningLength = winningLength;
+    }
 
-        public GameState(int width = 7, int height = 6, int winningLength = 4)
+    public (int width, int height) GetBoardSize()
+    {
+        return (Board.Length, Board.Length > 0 ? Board[0].Length : 0);
+    }
+
+    public EGameCellState[][] GetBoard() => Board;
+
+    public void MakeMove(int x, int y, EGameCellState player) => Board[x][y] = player;
+
+    public EGameCellState GetCellState(int x, int y) => Board[x][y];
+
+    public int GetWinningLength() => WinningLength;
+
+    public bool IsBoardFull()
+    {
+        for (int x = 0; x < Board.Length; x++)
         {
-            Board = new EGameCellState[width][];
-            for (int i = 0; i < width; i++)
+            for (int y = 0; y < Board[x].Length; y++)
             {
-                Board[i] = new EGameCellState[height];
+                if (Board[x][y] == EGameCellState.Empty) return false;
             }
-            WinningLength = winningLength;
         }
+        return true;
+    }
 
-        public int GetWinningLength() => WinningLength;
-
-        public void MakeMove(int x, int y, EGameCellState player)
+    public HashSet<(int x, int y)> GetEmptyCellCoordinates()
+    {
+        var allowedMoves = new HashSet<(int x, int y)>();
+        for (int x = 0; x < Board.Length; x++)
         {
-            Board[x][y] = player;
-        }
-
-        public EGameCellState GetCellState(int x, int y)
-        {
-            return Board[x][y];
-        }
-
-        public EGameCellState[][] GetBoard()
-        {
-            var result = new EGameCellState[Board.Length][];
-            for (int i = 0; i < Board.Length; i++)
+            for (int y = Board[x].Length - 1; y >= 0; y--)
             {
-                result[i] = new EGameCellState[Board[i].Length];
-                Array.Copy(Board[i], result[i], Board[i].Length);
-            }
-            return result;
-        }
-
-        public (int width, int height) GetBoardSize()
-        {
-            return (Board.Length, Board[0].Length);
-        }
-
-        public bool IsBoardFull()
-        {
-            for (int x = 0; x < Board.Length; x++)
-            {
-                for (int y = 0; y < Board[x].Length; y++)
+                if (Board[x][y] == EGameCellState.Empty)
                 {
-                    if (Board[x][y] == EGameCellState.Empty)
-                    {
-                        return false;
-                    }
+                    allowedMoves.Add((x, y));
+                    break;
                 }
             }
-            return true;
         }
-    
-        // ConnectFour: returns only the cells where a piece can actually land
-        // (the lowest empty cell of each column)
-        public HashSet<(int x, int y)> GetEmptyCellCoordinates()
-        {
-            var allowedMoves = new HashSet<(int x, int y)>();
-        
-            for (int x = 0; x < Board.Length; x++)
-            {
-                for (int y = Board[x].Length - 1; y >= 0; y--)
-                {
-                    if (Board[x][y] == EGameCellState.Empty)
-                    {
-                        allowedMoves.Add((x, y));
-                        break;
-                    }
-                }
-            }
-            return allowedMoves;
-        }
+        return allowedMoves;
     }
 }

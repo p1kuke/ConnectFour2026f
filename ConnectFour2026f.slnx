@@ -2,10 +2,10 @@
   <Folder Name="/!Solution Items/">
     <File Path=".gitignore" />
     <File Path="Directory.Build.props" />
+    <Project Path="ConsoleApp/ConsoleApp.csproj" />
+    <Project Path="DAL/DAL.EF.csproj" />
+    <Project Path="Game/Game.csproj" />
+    <Project Path="MenuSystem/MenuSystem.csproj" />
+    <Project Path="Tests/Tests.csproj" />
   </Folder>
-  <Project Path="ConsoleApp/ConsoleApp.csproj" />
-  <Project Path="DAL.Json/DAL.Json.csproj" />
-  <Project Path="Game/Game.csproj" />
-  <Project Path="MenuSystem/MenuSystem.csproj" />
-  <Project Path="Tests/Tests.csproj" />
 </Solution>

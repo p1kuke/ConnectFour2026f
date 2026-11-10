@@ -62,6 +62,7 @@ public class JsonGameRepository : IGameRepository
                 var state = JsonSerializer.Deserialize<GameState>(jsonString, _jsonOptions);
                 return (state!.Id, state.Name, state.SavedAt);
             })
+            .OrderBy(game => game.Name)
             .ToList();
     }
 
