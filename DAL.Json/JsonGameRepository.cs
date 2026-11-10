@@ -33,11 +33,6 @@ public class JsonGameRepository : IGameRepository
         File.WriteAllText(filePath, jsonString);
     }
 
-    public void Save(Guid id, string name, Game.GameState gameState)
-    {
-        throw new NotImplementedException();
-    }
-
     public (GameState State, string Name, DateTime SavedAt) Get(Guid id)
     {
         var filePath = GetFilePath(id);

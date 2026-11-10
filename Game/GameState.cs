@@ -7,7 +7,11 @@ namespace Game
         public EGameCellState CurrentPlayer { get; set; } = EGameCellState.Player1;
         public DateTime SavedAt { get; set; }
 
-        // Constructor to initialize the game state with default values
+        public GameState()
+        {
+            Board = Array.Empty<EGameCellState[]>();
+        }
+
         public GameState(int width = 7, int height = 6, int winningLength = 4)
         {
             Board = new EGameCellState[width][];
