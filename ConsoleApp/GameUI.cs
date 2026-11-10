@@ -6,9 +6,17 @@ public static class GameUi
 {
     public static void DrawGameBoard(EGameCellState[][] board)
     {
-        for (int x = 0; x < board.Length; x++)
+        if (board.Length == 0)
         {
-            for (int y = 0; y < board[x].Length; y++)
+            return;
+        }
+
+        var width = board.Length;
+        var height = board[0].Length;
+
+        for (var y = 0; y < height; y++)
+        {
+            for (var x = 0; x < width; x++)
             {
                 var cellState = board[x][y];
                 char displayChar = cellState switch
@@ -20,6 +28,7 @@ public static class GameUi
                 };
                 Console.Write(displayChar + " ");
             }
+
             Console.WriteLine();
         }
     }
