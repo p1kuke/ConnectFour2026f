@@ -50,28 +50,34 @@ public class GameController
             var currentPlayer = players[playerIndex];
             var move = currentPlayer.GetMove(gameBrain.GetEmptyCellCoordinates());
 
-            // Intercept the save key 'S'
+            // Intercept the exit key.
             if (move == (-1, -1))
             {
-                _gameRepository.Save(gameId, saveName, gameBrain.GetState());
-                Console.WriteLine($"\nGame '{saveName}' saved successfully!");
-
-                Console.Write("Continue playing? (Y/N): ");
-                var choice = Console.ReadLine()?.Trim().ToUpper();
-    
-                if (choice == "N")
+                while (true)
                 {
-                    return "game saved and exited";
-                }
+                    Console.Write("Save game before exiting? (Y/N): ");
+                    var choice = Console.ReadLine()?.Trim();
 
-                continue; 
+                    if (string.Equals(choice, "Y", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _gameRepository.Save(gameId, saveName, gameBrain.GetState());
+                        Console.WriteLine($"\nGame '{saveName}' saved successfully!");
+                        return "game saved and exited";
+                    }
+
+                    if (string.Equals(choice, "N", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Console.WriteLine("\nGame was not saved.");
+                        return "game exited";
+                    }
+
+                    Console.WriteLine("Please enter Y or N.");
+                }
             }
 
             // Execute a valid move
             gameBrain.MakeMove(move.x, move.y, currentPlayer.PlayerSymbol);
             Console.WriteLine($"{currentPlayer.Name} made a move at ({move.x + 1}, {move.y + 1})");
-            
-            _gameRepository.Save(gameId, saveName, gameBrain.GetState());
 
             if (gameBrain.IsWinningMove(move.x, move.y))
             {

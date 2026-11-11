@@ -107,6 +107,11 @@ public class GameBrain
         var curX = x + dx;
         var curY = y + dy;
 
+        if (_isCylinder && dx != 0)
+        {
+            curX = (curX + _width) % _width;
+        }
+
         var steps = 0;
         while (curY >= 0 && curY < _height &&
                (_isCylinder || (curX >= 0 && curX < _width)) &&

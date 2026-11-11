@@ -18,7 +18,7 @@ public class HumanPlayer : IPlayer
     {
         while (true)
         {
-            Console.Write($"{Name}, enter column number (1-based) or 'S' to save: ");
+            Console.Write($"{Name}, enter column number (1-based) or 'S' to exit: ");
             var input = Console.ReadLine()?.Trim();
 
             if (string.Equals(input, "S", StringComparison.OrdinalIgnoreCase))
@@ -28,7 +28,7 @@ public class HumanPlayer : IPlayer
 
             if (!int.TryParse(input, out var column))
             {
-                Console.WriteLine("Please enter a valid number or 'S' to save.");
+                Console.WriteLine("Please enter a valid number or 'S' to exit.");
                 continue;
             }
 

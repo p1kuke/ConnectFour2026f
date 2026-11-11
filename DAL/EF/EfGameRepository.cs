@@ -27,6 +27,15 @@ public class EfGameRepository : IGameRepository
         }
         else
         {
+            var existingConfiguration = _context.Configurations.Local
+                .FirstOrDefault(configuration => configuration.Id == gameState.Configuration.Id)
+                ?? _context.Configurations.FirstOrDefault(
+                    configuration => configuration.Id == gameState.Configuration.Id);
+            if (existingConfiguration is not null)
+            {
+                gameState.Configuration = existingConfiguration;
+            }
+
             _context.GameStates.Add(gameState);
         }
         _context.SaveChanges();

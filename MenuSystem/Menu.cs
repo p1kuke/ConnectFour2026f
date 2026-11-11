@@ -144,8 +144,8 @@ public class Menu
         shortcut.ToUpperInvariant() switch
         {
             "E" when _menuLevel is EMenuLevel.MainMenu or EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
-            "M" when _menuLevel is EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
-            "P" when _menuLevel == EMenuLevel.SubSubMenu => true,
+            "P" when _menuLevel is EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
+            "M" when _menuLevel == EMenuLevel.SubSubMenu => true,
             _ => false
         };
 
