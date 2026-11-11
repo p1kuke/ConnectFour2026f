@@ -42,6 +42,9 @@ public class AppDbContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.Entity<GameConfiguration>().HasKey(c => c.Id);
+        modelBuilder.Entity<GameConfiguration>()
+            .HasIndex(c => c.Name)
+            .IsUnique();
         modelBuilder.Entity<GameState>().HasKey(g => g.Id);
         modelBuilder.Entity<GameState>()
             .HasOne(g => g.Configuration)

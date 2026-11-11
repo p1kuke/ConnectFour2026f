@@ -3,21 +3,8 @@ namespace MenuSystem;
 public class Menu
 {
     private readonly string _title;
-    public Func<string>? TitleProvider { get; set; }
-
-    private List<MenuItem> _items = new();
-
-    public List<MenuItem> Items
-    {
-        get => _items;
-        set
-        {
-            _items = value ?? throw new ArgumentNullException(nameof(value));
-            ValidateItems();
-        }
-    }
-
     private readonly EMenuLevel _menuLevel;
+    private readonly List<MenuItem> _items = new();
 
     public Menu(string title, EMenuLevel menuLevel = EMenuLevel.MainMenu)
     {
@@ -25,9 +12,34 @@ public class Menu
         _menuLevel = menuLevel;
     }
 
+    public Func<string>? TitleProvider { get; set; }
+
+    public IReadOnlyList<MenuItem> Items => _items;
+
+    public Menu AddItem(MenuItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        var candidate = _items.Append(item).ToList();
+        ValidateItems(candidate);
+        _items.Add(item);
+        return this;
+    }
+
+    public Menu AddItems(params MenuItem[] items) => AddItems((IEnumerable<MenuItem>)items);
+
+    public Menu AddItems(IEnumerable<MenuItem> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        var additions = items.ToList();
+        var candidate = _items.Concat(additions).ToList();
+        ValidateItems(candidate);
+        _items.AddRange(additions);
+        return this;
+    }
+
     public string Run()
     {
-        ValidateItems();
+        ValidateItems(_items);
 
         var menuDone = false;
         var actionResult = "";
@@ -35,25 +47,45 @@ public class Menu
         {
             PrintMenu();
             var userChoice = Console.ReadLine();
-            // validate user choice
-            if (ValidateUserChoice(userChoice))
+            if (userChoice is null)
             {
-                // act on user choice
-                actionResult = PerformUserChoice(userChoice!);
-                if (_menuLevel == EMenuLevel.MainMenu && actionResult == "E")
+                Console.WriteLine();
+                return actionResult;
+            }
+
+            if (!ValidateUserChoice(userChoice))
+            {
+                Console.WriteLine("Invalid choice. Please try again.");
+                continue;
+            }
+
+            var isMandatory = IsMandatoryShortcut(userChoice);
+            actionResult = PerformUserChoice(userChoice);
+
+            if (isMandatory)
+            {
+                if (actionResult == "E")
                 {
                     menuDone = true;
                 }
                 else if (_menuLevel != EMenuLevel.MainMenu &&
-                         (actionResult == "E" || actionResult == "M" || actionResult == "P"))
+                         actionResult is "P" or "M")
                 {
                     menuDone = true;
                 }
-                
+
+                continue;
             }
-            else
+
+            // E exits from any depth. M unwinds to the main menu. A child's P means it
+            // already returned to this menu, so this menu must keep running.
+            if (actionResult == "E")
             {
-                Console.WriteLine("Invalid choice. Please try again.");
+                menuDone = true;
+            }
+            else if (actionResult == "M" && _menuLevel != EMenuLevel.MainMenu)
+            {
+                menuDone = true;
             }
         } while (!menuDone);
 
@@ -62,47 +94,48 @@ public class Menu
 
     private string PerformUserChoice(string userChoice)
     {
-        foreach (var menuItem in Items)
+        foreach (var menuItem in _items)
         {
             if (string.Equals(menuItem.Shortcut, userChoice, StringComparison.OrdinalIgnoreCase))
+            {
                 return menuItem.MethodToRun != null ? menuItem.MethodToRun() : "";
+            }
         }
 
         if (IsMandatoryShortcut(userChoice))
+        {
             return userChoice.ToUpperInvariant();
+        }
 
         return "";
     }
 
-    private bool ValidateUserChoice(string? userChoice)
+    private bool ValidateUserChoice(string userChoice)
     {
-        if (userChoice == null)
-        {
-            return false;
-        }
-
-        foreach (var menuItem in Items)
+        foreach (var menuItem in _items)
         {
             if (string.Equals(menuItem.Shortcut, userChoice, StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
+            }
         }
 
         return IsMandatoryShortcut(userChoice);
     }
 
-    private readonly MenuItem _exitMenuItem = new MenuItem()
+    private readonly MenuItem _exitMenuItem = new()
     {
         Title = "Exit",
         Shortcut = "E",
     };
 
-    private readonly MenuItem _returnToMainMenuItem = new MenuItem()
+    private readonly MenuItem _returnToMainMenuItem = new()
     {
         Title = "Return to main menu",
         Shortcut = "M",
     };
 
-    private readonly MenuItem _returnToPreviousMenuItem = new MenuItem()
+    private readonly MenuItem _returnToPreviousMenuItem = new()
     {
         Title = "Return to previous menu",
         Shortcut = "P",
@@ -112,7 +145,7 @@ public class Menu
     {
         Console.WriteLine(GetTitle());
         Console.WriteLine("---------------------");
-        foreach (var menuItem in Items)
+        foreach (var menuItem in _items)
         {
             Console.WriteLine(menuItem);
         }
@@ -137,40 +170,46 @@ public class Menu
         Console.Write("Please select an option: ");
     }
 
-    private string GetTitle() =>
-        TitleProvider != null ? TitleProvider() : _title;
+    private string GetTitle() => TitleProvider != null ? TitleProvider() : _title;
 
     private bool IsMandatoryShortcut(string shortcut) =>
         shortcut.ToUpperInvariant() switch
         {
-            "E" when _menuLevel is EMenuLevel.MainMenu or EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
+            "E" => true,
             "P" when _menuLevel is EMenuLevel.SubMenu or EMenuLevel.SubSubMenu => true,
             "M" when _menuLevel == EMenuLevel.SubSubMenu => true,
             _ => false
         };
 
-    private void ValidateItems()
+    private static void ValidateItems(IReadOnlyCollection<MenuItem> items)
     {
         var shortcuts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var item in Items)
+        foreach (var item in items)
         {
-            if (item is null)
-                throw new ArgumentException("Menu items cannot be null.", nameof(Items));
-
             if (string.IsNullOrWhiteSpace(item.Shortcut))
-                throw new ArgumentException("Menu item shortcuts cannot be empty.", nameof(Items));
+            {
+                throw new ArgumentException("Menu item shortcuts cannot be empty.", nameof(items));
+            }
 
-            if (item.Shortcut.Length == 1 && item.Shortcut.ToUpperInvariant() is "E" or "M" or "P")
+            if (string.IsNullOrWhiteSpace(item.Title) && item.TitleProvider is null)
+            {
+                throw new ArgumentException("Menu item titles cannot be empty.", nameof(items));
+            }
+
+            if (item.Shortcut.Length == 1 &&
+                item.Shortcut.ToUpperInvariant() is "E" or "M" or "P")
             {
                 throw new ArgumentException(
                     $"Shortcut '{item.Shortcut}' is reserved for menu navigation.",
-                    nameof(Items));
+                    nameof(items));
             }
 
             if (!shortcuts.Add(item.Shortcut))
+            {
                 throw new ArgumentException(
                     $"Duplicate menu shortcut '{item.Shortcut}'.",
-                    nameof(Items));
+                    nameof(items));
+            }
         }
     }
 }

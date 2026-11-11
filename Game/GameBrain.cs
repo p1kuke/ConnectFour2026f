@@ -55,6 +55,12 @@ public class GameBrain
 
     public void MakeMove(int x, int y, EGameCellState player)
     {
+        if (player != _gameState.CurrentPlayer)
+        {
+            throw new InvalidOperationException(
+                $"Invalid move: it is {_gameState.CurrentPlayer}'s turn, not {player}'s.");
+        }
+
         // validate move: only the lowest empty cell of a column is allowed
         if (!GetEmptyCellCoordinates().Contains((x, y)))
         {
@@ -83,15 +89,7 @@ public class GameBrain
 
         foreach (var (dx, dy) in directions)
         {
-            // the placed piece itself
-            var count = 1;
-
-            // forward
-            count += CountInDirection(x, y, dx, dy, moveBy);
-            // backward
-            count += CountInDirection(x, y, -dx, -dy, moveBy);
-
-            if (count >= winningLength)
+            if (CountLine(x, y, dx, dy, moveBy) >= winningLength)
             {
                 return true;
             }
@@ -100,35 +98,57 @@ public class GameBrain
         return false;
     }
 
-    // counts consecutive cells of the same player starting from the neighbour of (x, y)
-    private int CountInDirection(int x, int y, int dx, int dy, EGameCellState player)
+    // Counts distinct consecutive cells through (x, y) in both directions. The visited set
+    // prevents double counting when a cylinder line wraps around the board edge.
+    private int CountLine(int x, int y, int dx, int dy, EGameCellState player)
     {
-        var count = 0;
-        var curX = x + dx;
-        var curY = y + dy;
+        var visited = new HashSet<(int X, int Y)> { (x, y) };
+        AddDirection(x, y, dx, dy, player, visited);
+        AddDirection(x, y, -dx, -dy, player, visited);
+        return visited.Count;
+    }
 
-        if (_isCylinder && dx != 0)
-        {
-            curX = (curX + _width) % _width;
-        }
+    private void AddDirection(
+        int x,
+        int y,
+        int dx,
+        int dy,
+        EGameCellState player,
+        HashSet<(int X, int Y)> visited)
+    {
+        var curX = x;
+        var curY = y;
 
-        var steps = 0;
-        while (curY >= 0 && curY < _height &&
-               (_isCylinder || (curX >= 0 && curX < _width)) &&
-               _gameState.GetCellState(curX, curY) == player)
+        while (true)
         {
-            count++;
-            curX = _isCylinder && dx != 0
-                ? (curX + dx + _width) % _width
-                : curX + dx;
+            curX += dx;
             curY += dy;
-            steps++;
-            if (_isCylinder && dx != 0 && steps >= _width)
+
+            if (curY < 0 || curY >= _height)
             {
-                break;
+                return;
+            }
+
+            if (_isCylinder && dx != 0)
+            {
+                curX = (curX + _width) % _width;
+            }
+            else if (curX < 0 || curX >= _width)
+            {
+                return;
+            }
+
+            var cell = (X: curX, Y: curY);
+            if (!visited.Add(cell))
+            {
+                return;
+            }
+
+            if (_gameState.GetCellState(curX, curY) != player)
+            {
+                visited.Remove(cell);
+                return;
             }
         }
-
-        return count;
     }
 }

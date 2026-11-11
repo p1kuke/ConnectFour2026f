@@ -1,25 +1,37 @@
-namespace Game;
+using Game;
 
-public class HumanPlayer : IPlayer
+namespace ConsoleApp;
+
+public sealed class HumanPlayer : IMoveProvider
 {
     private readonly string _name;
-    private readonly EGameCellState _playerSymbol;
 
     public HumanPlayer(string name, EGameCellState playerSymbol)
     {
         _name = name;
-        _playerSymbol = playerSymbol;
+        PlayerSymbol = playerSymbol;
     }
 
     public string Name => _name;
-    public EGameCellState PlayerSymbol => _playerSymbol;
+    public EGameCellState PlayerSymbol { get; }
 
-    public (int x, int y) GetMove(HashSet<(int x, int y)> legalMoves)
+    public (int X, int Y) GetMove(GameBrain game, CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(game);
+        var legalMoves = game.GetEmptyCellCoordinates();
+
         while (true)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Console.Write($"{Name}, enter column number (1-based) or 'S' to exit: ");
             var input = Console.ReadLine()?.Trim();
+
+            if (input is null)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Input was closed.");
+                return (-1, -1);
+            }
 
             if (string.Equals(input, "S", StringComparison.OrdinalIgnoreCase))
             {

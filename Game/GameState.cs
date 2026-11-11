@@ -12,6 +12,7 @@ public class GameState : BaseEntity
     public EGameMode GameMode { get; set; } = EGameMode.HumanVsHuman;
     public EPlayerType Player1Type { get; set; } = EPlayerType.Human;
     public EPlayerType Player2Type { get; set; } = EPlayerType.Human;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime SavedAt { get; set; } = DateTime.UtcNow;
     public List<GameMove> MoveHistory { get; set; } = [];
 

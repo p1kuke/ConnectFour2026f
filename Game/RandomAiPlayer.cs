@@ -1,6 +1,6 @@
 namespace Game;
 
-public class RandomAiPlayer : IPlayer
+public class RandomAiPlayer : IMoveProvider
 {
     private readonly Random _random;
 
@@ -10,14 +10,19 @@ public class RandomAiPlayer : IPlayer
         _random = random ?? new Random();
     }
 
-    public string Name => "Random AI";
+    public string Name => $"Random AI ({PlayerSymbol})";
     public EGameCellState PlayerSymbol { get; }
 
-    public (int x, int y) GetMove(HashSet<(int x, int y)> legalMoves)
+    public (int X, int Y) GetMove(GameBrain game, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(legalMoves);
+        ArgumentNullException.ThrowIfNull(game);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var legalMoves = game.GetEmptyCellCoordinates();
         if (legalMoves.Count == 0)
+        {
             throw new InvalidOperationException("Cannot choose a move when no legal moves are available.");
+        }
 
         return legalMoves.ElementAt(_random.Next(legalMoves.Count));
     }

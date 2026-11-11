@@ -99,6 +99,20 @@ public sealed class RepositoryContractTests
     }
 
     [Theory]
+    [MemberData(nameof(ConfigRepositoryFactories))]
+    public void ConfigRepository_PreservesNamesWithPathSeparators(
+        Func<IConfigRepository> createRepository)
+    {
+        var repositoryScope = new RepositoryScope(createRepository());
+        var configuration = new GameConfiguration("Custom / config", 8, 7, 4);
+
+        repositoryScope.Config.Save(configuration.Name, configuration);
+
+        Assert.Contains(configuration.Name, repositoryScope.Config.List());
+        Assert.Equal(configuration.Name, repositoryScope.Config.Get(configuration.Name).Name);
+    }
+
+    [Theory]
     [MemberData(nameof(GameRepositoryFactories))]
     public void GameRepository_SaveAndGet_PreservesStateAndStableId(
         Func<IGameRepository> createRepository)
@@ -156,6 +170,36 @@ public sealed class RepositoryContractTests
         Assert.Single(repositoryScope.Game.List());
         Assert.Equal("Updated name", result.Name);
         Assert.Equal(EGameCellState.Player2, result.State.CurrentPlayer);
+    }
+
+    [Theory]
+    [MemberData(nameof(GameRepositoryFactories))]
+    public void GameRepository_SaveWithSameId_UpdatesConfiguration(
+        Func<IGameRepository> createRepository)
+    {
+        var repositoryScope = new RepositoryScope(createRepository());
+        var id = Guid.NewGuid();
+        var first = new GameConfiguration("First configuration", 7, 6, 4);
+        var second = new GameConfiguration("Second configuration", 9, 8, 5, true);
+        var original = new GameState(first.BoardWidth, first.BoardHeight)
+        {
+            Configuration = first
+        };
+        var updated = new GameState(second.BoardWidth, second.BoardHeight)
+        {
+            Configuration = second
+        };
+
+        repositoryScope.Game.Save(id, "Test save", original);
+        repositoryScope.Game.Save(id, "Test save", updated);
+
+        var result = repositoryScope.Game.Get(id);
+
+        Assert.Equal(second.Id, result.State.Configuration.Id);
+        Assert.Equal(second.Name, result.State.Configuration.Name);
+        Assert.Equal(second.BoardWidth, result.State.Configuration.BoardWidth);
+        Assert.Equal(second.BoardHeight, result.State.Configuration.BoardHeight);
+        Assert.Equal(second.IsCylinder, result.State.Configuration.IsCylinder);
     }
 
     [Theory]

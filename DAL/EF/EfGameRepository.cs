@@ -20,25 +20,41 @@ public class EfGameRepository : IGameRepository
         gameState.Name = name;
         gameState.SavedAt = DateTime.UtcNow;
 
+        var configuration = ResolveConfiguration(gameState.Configuration);
         var existing = _context.GameStates.FirstOrDefault(g => g.Id == id);
         if (existing != null)
         {
             _context.Entry(existing).CurrentValues.SetValues(gameState);
+            _context.Entry(existing)
+                .Property("ConfigurationId")
+                .CurrentValue = configuration.Id;
         }
         else
         {
-            var existingConfiguration = _context.Configurations.Local
-                .FirstOrDefault(configuration => configuration.Id == gameState.Configuration.Id)
-                ?? _context.Configurations.FirstOrDefault(
-                    configuration => configuration.Id == gameState.Configuration.Id);
-            if (existingConfiguration is not null)
-            {
-                gameState.Configuration = existingConfiguration;
-            }
-
+            gameState.Configuration = configuration;
             _context.GameStates.Add(gameState);
         }
         _context.SaveChanges();
+    }
+
+    private GameConfiguration ResolveConfiguration(GameConfiguration configuration)
+    {
+        var tracked = _context.Configurations.Local
+            .FirstOrDefault(existing => existing.Id == configuration.Id);
+        if (tracked is not null)
+        {
+            return tracked;
+        }
+
+        var stored = _context.Configurations
+            .FirstOrDefault(existing => existing.Id == configuration.Id);
+        if (stored is not null)
+        {
+            return stored;
+        }
+
+        _context.Configurations.Add(configuration);
+        return configuration;
     }
 
     public (GameState State, string Name, DateTime SavedAt) Get(Guid id)

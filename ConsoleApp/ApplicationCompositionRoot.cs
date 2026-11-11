@@ -34,9 +34,9 @@ public static class ApplicationCompositionRoot
         if (useDatabase)
         {
             using var migrationScope = provider.CreateScope();
-            migrationScope.ServiceProvider
-                .GetRequiredService<AppDbContext>()
-                .Database.Migrate();
+            var context = migrationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            LegacyDatabaseUpgrader.UpgradeIfNeeded(context);
+            context.Database.Migrate();
         }
 
         return provider;

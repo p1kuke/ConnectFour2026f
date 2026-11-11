@@ -19,6 +19,8 @@ public class JsonConfigRepository : IConfigRepository
 
     private string GetFilePath(string name)
     {
+        // The file name is sanitized for the file system, but the configuration's
+        // real name is kept inside the JSON. List() reads it back from there.
         var safeName = string.Join("_", name.Split(Path.GetInvalidFileNameChars()));
         return Path.Combine(_folderPath, $"{safeName}.config.json");
     }
@@ -59,10 +61,30 @@ public class JsonConfigRepository : IConfigRepository
         if (!Directory.Exists(_folderPath)) return new List<string>();
 
         return Directory.GetFiles(_folderPath, "*.config.json")
-            .Select(Path.GetFileName)
-            .Select(fileName => fileName!.Replace(".config.json", ""))
+            .Select(ReadName)
+            .OfType<string>()
+            .Where(name => !string.IsNullOrWhiteSpace(name))
             .OrderBy(name => name)
             .ToList();
+    }
+
+    private string? ReadName(string filePath)
+    {
+        try
+        {
+            var configuration = JsonSerializer.Deserialize<GameConfiguration>(
+                File.ReadAllText(filePath), _jsonOptions);
+            if (!string.IsNullOrWhiteSpace(configuration?.Name))
+            {
+                return configuration.Name;
+            }
+        }
+        catch (JsonException)
+        {
+            // Fall back to the file name for a damaged or manually edited file.
+        }
+
+        return Path.GetFileName(filePath).Replace(".config.json", "");
     }
 
     public void Delete(string name)

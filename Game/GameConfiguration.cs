@@ -31,7 +31,10 @@ public record GameConfiguration
         if (WinCondition <= 0 || WinCondition > Math.Max(BoardWidth, BoardHeight))
             throw new ArgumentOutOfRangeException(nameof(WinCondition), "Win condition is outside the board dimensions.");
     }
-    
+
+    public static bool IsPresetName(string name) =>
+        Presets.Any(preset => string.Equals(preset.Name, name, StringComparison.OrdinalIgnoreCase));
+
     // Presets for quick access to common configurations
     public static List<GameConfiguration> Presets => new()
     {
