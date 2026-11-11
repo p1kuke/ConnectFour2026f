@@ -60,6 +60,9 @@ namespace DAL.Migrations
                     b.Property<int>("CurrentPlayer")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("GameMode")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("MoveHistoryJson")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -67,6 +70,12 @@ namespace DAL.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Player1Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Player2Type")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("SavedAt")
                         .HasColumnType("TEXT");

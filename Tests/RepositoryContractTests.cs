@@ -109,7 +109,10 @@ public sealed class RepositoryContractTests
         var state = new GameState(configuration.BoardWidth, configuration.BoardHeight)
         {
             Configuration = configuration,
-            CurrentPlayer = EGameCellState.Player2
+            CurrentPlayer = EGameCellState.Player2,
+            GameMode = EGameMode.HumanVsAi,
+            Player1Type = EPlayerType.Human,
+            Player2Type = EPlayerType.RandomAi
         };
         state.MakeMove(2, 0, EGameCellState.Player1);
 
@@ -122,6 +125,9 @@ public sealed class RepositoryContractTests
         Assert.Equal("Test save", result.Name);
         Assert.Equal(EGameCellState.Player2, result.State.CurrentPlayer);
         Assert.Equal(EGameCellState.Player1, result.State.GetCellState(2, 0));
+        Assert.Equal(EGameMode.HumanVsAi, result.State.GameMode);
+        Assert.Equal(EPlayerType.Human, result.State.Player1Type);
+        Assert.Equal(EPlayerType.RandomAi, result.State.Player2Type);
     }
 
     [Theory]

@@ -1,19 +1,9 @@
 namespace Game;
 
-public class AIPlayer : IPlayer
+public sealed class AIPlayer : RandomAiPlayer
 {
-    public string Name { get; } = "AIPlayer";
-    private readonly Random _random = new();
-    public EGameCellState PlayerSymbol { get; }
-
     public AIPlayer(EGameCellState playerSymbol)
+        : base(playerSymbol)
     {
-        PlayerSymbol = playerSymbol;
     }
-    
-    public (int x, int y) GetMove(HashSet<(int x, int y)> legalMoves)
-    {
-        return legalMoves.ToArray()[_random.Next(legalMoves.Count)];
-    }
-
 }

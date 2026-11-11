@@ -9,6 +9,9 @@ public class GameState : BaseEntity
     public int WinningLength { get; set; } = 4;
     public EGameCellState CurrentPlayer { get; set; } = EGameCellState.Player1;
     public GameConfiguration Configuration { get; set; } = default!;
+    public EGameMode GameMode { get; set; } = EGameMode.HumanVsHuman;
+    public EPlayerType Player1Type { get; set; } = EPlayerType.Human;
+    public EPlayerType Player2Type { get; set; } = EPlayerType.Human;
     public DateTime SavedAt { get; set; } = DateTime.UtcNow;
     public List<GameMove> MoveHistory { get; set; } = [];
 

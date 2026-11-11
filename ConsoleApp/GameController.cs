@@ -19,8 +19,17 @@ public class GameController
     }
 
     public string RunGame(GameBrain gameBrain, Guid gameId, string saveName,
-        GameMode mode = GameMode.HumanVsHuman)
+        GameMode? requestedMode = null)
     {
+        var mode = requestedMode ?? (GameMode)gameBrain.GetState().GameMode;
+        gameBrain.GetState().GameMode = ToGameMode(mode);
+        gameBrain.GetState().Player1Type = mode == GameMode.AiVsAi
+            ? EPlayerType.RandomAi
+            : EPlayerType.Human;
+        gameBrain.GetState().Player2Type = mode == GameMode.HumanVsHuman
+            ? EPlayerType.Human
+            : EPlayerType.RandomAi;
+
         var players = mode switch
         {
             GameMode.HumanVsHuman => new IPlayer[]
@@ -30,13 +39,13 @@ public class GameController
             },
             GameMode.AiVsAi => new IPlayer[]
             {
-                new AIPlayer(EGameCellState.Player1),
-                new AIPlayer(EGameCellState.Player2)
+                new RandomAiPlayer(EGameCellState.Player1),
+                new RandomAiPlayer(EGameCellState.Player2)
             },
             _ => new IPlayer[]
             {
                 new HumanPlayer("Player 1", EGameCellState.Player1),
-                new AIPlayer(EGameCellState.Player2)
+                new RandomAiPlayer(EGameCellState.Player2)
             }
         };
 
@@ -49,6 +58,9 @@ public class GameController
 
             var currentPlayer = players[playerIndex];
             var move = currentPlayer.GetMove(gameBrain.GetEmptyCellCoordinates());
+
+            if (mode == GameMode.AiVsAi && move == (-1, -1))
+                return "game stopped";
 
             // Intercept the exit key.
             if (move == (-1, -1))
@@ -79,6 +91,12 @@ public class GameController
             gameBrain.MakeMove(move.x, move.y, currentPlayer.PlayerSymbol);
             Console.WriteLine($"{currentPlayer.Name} made a move at ({move.x + 1}, {move.y + 1})");
 
+            if (mode == GameMode.AiVsAi)
+            {
+                if (WaitForAiTurnOrStop())
+                    return "game stopped";
+            }
+
             if (gameBrain.IsWinningMove(move.x, move.y))
             {
                 GameUi.DrawGameBoard(gameBrain.GetBoard(), gameBrain.GetState().MoveHistory.LastOrDefault());
@@ -99,5 +117,33 @@ public class GameController
         }
 
         return "game over";
+    }
+
+    private static EGameMode ToGameMode(GameMode mode) =>
+        mode switch
+        {
+            GameMode.HumanVsHuman => EGameMode.HumanVsHuman,
+            GameMode.HumanVsAi => EGameMode.HumanVsAi,
+            GameMode.AiVsAi => EGameMode.AiVsAi,
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown game mode.")
+        };
+
+    private static bool WaitForAiTurnOrStop()
+    {
+        const int delayMilliseconds = 500;
+        const int checkIntervalMilliseconds = 50;
+
+        for (var elapsed = 0; elapsed < delayMilliseconds; elapsed += checkIntervalMilliseconds)
+        {
+            if (!Console.IsInputRedirected && Console.KeyAvailable &&
+                Console.ReadKey(intercept: true).Key == ConsoleKey.Q)
+            {
+                return true;
+            }
+
+            Thread.Sleep(checkIntervalMilliseconds);
+        }
+
+        return false;
     }
 }
