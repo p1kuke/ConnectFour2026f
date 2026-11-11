@@ -70,6 +70,8 @@ public class GameController
             // Execute a valid move
             gameBrain.MakeMove(move.x, move.y, currentPlayer.PlayerSymbol);
             Console.WriteLine($"{currentPlayer.Name} made a move at ({move.x + 1}, {move.y + 1})");
+            
+            _gameRepository.Save(gameId, saveName, gameBrain.GetState());
 
             if (gameBrain.IsWinningMove(move.x, move.y))
             {
