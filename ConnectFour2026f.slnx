@@ -8,6 +8,7 @@
   <Project Path="DAL.Json/DAL.Json.csproj" />
   <Project Path="DAL/DAL.EF.csproj" />
   <Project Path="Game/Game.csproj" />
+  <Project Path="MenuDemo/MenuDemo.csproj" />
   <Project Path="MenuSystem/MenuSystem.csproj" />
   <Project Path="Tests/Tests.csproj" />
 </Solution>
